@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Product Grab Station</title>
+<meta name="description" content="Browse product footage from Notion, grab clips to your phone, and move each clip through its status.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&display=swap">
+<style>
+  :root{
+    --ground:#f2ece1; --surface:#fffdf8; --raise:#fbf6ee;
+    --ink:#231e17; --dim:#6f665a; --line:#e4dccd;
+    --rust:#c05a29; --rust-ink:#8a3d18;
+    --gold:#b98518; --gold-bg:#f6ecd2;
+    --sage:#557049; --sage-bg:#e6ecdf;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#15120e; --surface:#201b15; --raise:#28221b;
+      --ink:#ece3d3; --dim:#9d9082; --line:#352c22;
+      --rust:#e37c46; --rust-ink:#f0a578;
+      --gold:#e0b148; --gold-bg:#332a17;
+      --sage:#93b483; --sage-bg:#232c1c;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#15120e; --surface:#201b15; --raise:#28221b;
+    --ink:#ece3d3; --dim:#9d9082; --line:#352c22;
+    --rust:#e37c46; --rust-ink:#f0a578;
+    --gold:#e0b148; --gold-bg:#332a17;
+    --sage:#93b483; --sage-bg:#232c1c;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0; background:var(--ground); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:640px; margin:0 auto; padding-inline:16px; padding-bottom:40px}
+  header{position:sticky; top:env(safe-area-inset-top,0px); z-index:10;
+    background:var(--ground); border-bottom:1px solid var(--line); padding-block:.7rem .55rem}
+  .hrow{display:flex; align-items:center; gap:.55rem; min-height:1.9rem}
+  h1{font-family:"Archivo",system-ui,sans-serif; font-weight:800; font-size:1.1rem;
+    letter-spacing:-.01em; margin:0; text-transform:uppercase}
+  h1 .dot{color:var(--rust)}
+  .back{font-family:"Archivo",system-ui,sans-serif; font-weight:700; font-size:.8rem;
+    background:var(--raise); border:1px solid var(--line); color:var(--ink);
+    border-radius:9px; padding:.35rem .6rem; cursor:pointer}
+  .crumb{font-family:"Archivo",system-ui,sans-serif; font-weight:700; font-size:.95rem;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0}
+  .spacer{flex:1}
+  .icbtn{background:var(--raise); border:1px solid var(--line); color:var(--dim);
+    border-radius:9px; padding:.35rem .55rem; cursor:pointer; font-size:.9rem; line-height:1}
+  .sub{font-size:.7rem; color:var(--dim); margin-top:.35rem}
+  .sub b{color:var(--sage)}
+  .toggle{display:flex; align-items:center; gap:.4rem; margin-top:.5rem; font-size:.75rem; color:var(--dim)}
+  .toggle input{accent-color:var(--rust); width:1.05rem; height:1.05rem}
+  .search{width:100%; margin-top:.6rem; font:inherit; font-size:.85rem; padding:.5rem .6rem;
+    border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--ink)}
+
+  .list{display:flex; flex-direction:column; gap:.55rem; margin-top:.8rem}
+  .folder{display:flex; align-items:center; gap:.7rem; background:var(--surface);
+    border:1px solid var(--line); border-radius:13px; padding:.75rem .8rem; cursor:pointer;
+    text-align:left; width:100%; color:var(--ink); font:inherit}
+  .folder .fi{font-size:1.15rem; flex:0 0 auto}
+  .folder .fn{font-family:"Archivo",system-ui,sans-serif; font-weight:700; font-size:.92rem;
+    min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .folder .cnt{color:var(--dim); flex:0 0 auto; font-size:.72rem; font-variant-numeric:tabular-nums}
+  .folder .chev{color:var(--dim); flex:0 0 auto}
+
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:.8rem .85rem; display:flex; flex-direction:column; gap:.6rem}
+  .card.used{opacity:.55}
+  .ctop{display:flex; gap:.6rem; align-items:flex-start}
+  .idx{font-family:ui-monospace,Consolas,monospace; font-size:.7rem; font-weight:700; color:var(--dim);
+    background:var(--raise); border:1px solid var(--line); border-radius:8px; padding:.3rem .45rem;
+    min-width:2.1rem; text-align:center; flex:0 0 auto}
+  .cmeta{min-width:0; flex:1}
+  .cname{font-family:ui-monospace,Consolas,monospace; font-weight:600; font-size:.86rem;
+    word-break:break-all; line-height:1.25}
+  .ctags{display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.25rem; font-size:.72rem; color:var(--dim)}
+  .actions{display:flex; gap:.45rem; align-items:center}
+  .btn{display:flex; align-items:center; justify-content:center; gap:.3rem;
+    font-family:"Archivo",system-ui,sans-serif; font-weight:700; font-size:.8rem; border-radius:10px;
+    padding:.58rem .55rem; cursor:pointer; border:1px solid var(--line); background:var(--raise);
+    color:var(--ink); text-decoration:none; line-height:1; -webkit-tap-highlight-color:transparent}
+  .btn.prev{color:var(--rust-ink); flex:0 0 auto}
+  .btn.grab{background:var(--rust); color:#fff; border-color:var(--rust); flex:0 0 auto}
+  .btn[aria-disabled="true"]{opacity:.4; pointer-events:none}
+  .statwrap{flex:1; min-width:0}
+  .statsel{width:100%; font:inherit; font-size:.8rem; font-family:"Archivo",system-ui,sans-serif;
+    font-weight:700; padding:.55rem .5rem; border-radius:10px; border:1px solid var(--line);
+    background:var(--raise); color:var(--ink)}
+  .card.used .statsel{background:var(--sage-bg); color:var(--sage); border-color:var(--sage)}
+
+  .note{background:var(--gold-bg); border:1px solid var(--line); border-radius:11px;
+    padding:.7rem .8rem; font-size:.78rem; color:var(--ink); margin-top:.8rem; line-height:1.45}
+  .empty{text-align:center; color:var(--dim); padding:2.2rem 1rem; font-size:.9rem}
+  .empty .big{font-size:1.6rem; margin-bottom:.4rem}
+  .spin{text-align:center; color:var(--dim); padding:2rem 1rem; font-size:.85rem}
+  footer{margin-top:1.4rem; color:var(--dim); font-size:.7rem; text-align:center; line-height:1.5}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="hrow" id="hrow"></div>
+    <div id="hmeta"></div>
+  </header>
+  <div id="app"></div>
+  <footer id="foot"></footer>
+</div>
+
+<script>
+// ===== Product Grab Station — Notion-backed (via serverless proxy, no keys in browser) =====
+const API = "/api/clips";
+
+// Full Status enum from Creator Clips. "Available" = not yet used.
+const STATUSES = ["Looking Good","Filmed","Ready To Post","In Rotation","Posted","Mod","Not Her Time"];
+const AVAILABLE = ["Looking Good","Filmed"];               // still up for grabs
+const isUsed = c => c.status && AVAILABLE.indexOf(c.status) === -1;
+
+const dlUrl = c => c.driveFileId ? "https://drive.google.com/uc?export=download&id=" + encodeURIComponent(c.driveFileId) : (c.driveLink || "");
+const prevUrl = c => c.driveLink || (c.driveFileId ? "https://drive.google.com/file/d/" + encodeURIComponent(c.driveFileId) + "/view" : "");
+const esc = s => (""+(s==null?"":s)).replace(/[&<>"]/g, ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
+
+// ---- state ----
+let clips = [];
+let view = "folders", product = null;
+let busy = true, loadErr = null, hideUsed = true, filter = "";
+
+async function load(){
+  busy = true; loadErr = null; render();
+  try{
+    const res = await fetch(API, {headers:{"Accept":"application/json"}});
+    if(!res.ok){ loadErr = "http_"+res.status; busy=false; render(); return; }
+    const data = await res.json();
+    clips = Array.isArray(data.clips) ? data.clips : [];
+  }catch(e){ loadErr = "network"; }
+  busy = false; render();
+}
+
+async function setStatus(c, status){
+  const prev = c.status;
+  c.status = status;             // optimistic
+  render();
+  try{
+    const res = await fetch(API, {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({id:c.id, status})});
+    if(!res.ok) throw 0;
+  }catch(e){ c.status = prev; render(); alert("Couldn't update status — check connection."); }
+}
+
+function products(){
+  const g = {};
+  clips.forEach(c => { (g[c.product] = g[c.product] || []).push(c); });
+  return Object.keys(g).sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()))
+    .map(name => ({name, clips:g[name]}));
+}
+
+function render(){
+  const hrow = document.getElementById("hrow");
+  const hmeta = document.getElementById("hmeta");
+  const app = document.getElementById("app");
+  const foot = document.getElementById("foot");
+
+  if(view === "folders"){
+    hrow.innerHTML = '<h1>Grab Station<span class="dot">.</span></h1><span class="spacer"></span>'
+      + '<button class="icbtn" id="refresh" title="Refresh">↻</button>';
+    const total = clips.length, avail = clips.filter(c=>!isUsed(c)).length;
+    hmeta.innerHTML = '<div class="sub"><b>'+total+'</b> clips &middot; '+avail+' available &middot; from Notion</div>'
+      + (total ? '<input class="search" id="search" placeholder="Search products…" value="'+esc(filter)+'">' : '');
+
+    if(busy){ app.innerHTML = '<div class="spin">Loading footage from Notion…</div>'; foot.innerHTML=""; return; }
+    if(loadErr){
+      app.innerHTML = '<div class="note">'+(loadErr==="network"
+        ? 'Could not reach the server. Is the Netlify function deployed?'
+        : 'Server error ('+esc(loadErr)+'). Check NOTION_TOKEN / NOTION_DATABASE_ID in Netlify.')+'</div>';
+      const r=document.getElementById("refresh"); if(r) r.onclick=load; foot.innerHTML=""; return;
+    }
+    let groups = products();
+    if(filter){ const f=filter.toLowerCase(); groups = groups.filter(g=>g.name.toLowerCase().includes(f)); }
+    if(!groups.length){ app.innerHTML = '<div class="empty"><div class="big">📦</div>No matching products.</div>'; }
+    else {
+      app.innerHTML = '<div class="list">' + groups.map(g => {
+        const av = g.clips.filter(c=>!isUsed(c)).length;
+        return '<button class="folder" data-p="'+esc(g.name)+'"><span class="fi">📁</span>'
+          + '<span class="fn">'+esc(g.name)+'</span>'
+          + '<span class="cnt">'+av+' / '+g.clips.length+'</span><span class="chev">›</span></button>';
+      }).join("") + '</div>';
+      app.querySelectorAll(".folder").forEach(b => b.onclick = () => { product=b.dataset.p; view="clips"; render(); });
+    }
+    const r=document.getElementById("refresh"); if(r) r.onclick=load;
+    const s=document.getElementById("search"); if(s) s.oninput=()=>{ filter=s.value; const pos=s.selectionStart; render(); const s2=document.getElementById("search"); if(s2){s2.focus(); try{s2.setSelectionRange(pos,pos);}catch(e){}} };
+    foot.innerHTML = 'Pick a product → <b>Grab</b> a clip → set its <b>Status</b>. Status writes straight back to your Creator Clips database in Notion.';
+    return;
+  }
+
+  // clips view
+  const group = products().find(g=>g.name===product) || {name:product, clips:[]};
+  hrow.innerHTML = '<button class="back" id="back">‹ Products</button>'
+    + '<span class="crumb">'+esc(group.name)+'</span><span class="spacer"></span>'
+    + '<button class="icbtn" id="refresh" title="Refresh">↻</button>';
+  const nUsed = group.clips.filter(isUsed).length;
+  hmeta.innerHTML = group.clips.length
+    ? '<label class="toggle"><input type="checkbox" id="hu"'+(hideUsed?" checked":"")+'> Hide used ('+nUsed+'/'+group.clips.length+')</label>'
+    : '<div class="sub">&nbsp;</div>';
+
+  const shown = group.clips.filter(c => hideUsed ? !isUsed(c) : true);
+  if(!shown.length){
+    app.innerHTML = '<div class="empty"><div class="big">✨</div>'
+      + (group.clips.length ? 'Every clip here is used.' : 'No clips in this product.') + '</div>';
+  } else {
+    app.innerHTML = '<div class="list">' + shown.map((c,i) => {
+      const u=isUsed(c), g=dlUrl(c), p=prevUrl(c);
+      const opts = STATUSES.map(s=>'<option'+(s===c.status?' selected':'')+'>'+esc(s)+'</option>').join("");
+      return '<div class="card'+(u?" used":"")+'" data-id="'+esc(c.id)+'">'
+        + '<div class="ctop"><span class="idx">'+String(i+1).padStart(2,"0")+'</span>'
+        + '<div class="cmeta"><div class="cname">'+esc(c.name || "(clip)")+'</div>'
+        + '<div class="ctags">'+(c.creator?'<span>'+esc(c.creator)+'</span>':'')+'</div></div></div>'
+        + '<div class="actions">'
+        + '<a class="btn prev" '+(p?'href="'+esc(p)+'" target="_blank" rel="noopener"':'aria-disabled="true"')+'>▶</a>'
+        + '<a class="btn grab" '+(g?'href="'+esc(g)+'" target="_blank" rel="noopener"':'aria-disabled="true"')+'>⬇ Grab</a>'
+        + '<span class="statwrap"><select class="statsel">'+opts+'</select></span>'
+        + '</div></div>';
+    }).join("") + '</div>';
+    app.querySelectorAll(".card").forEach(card => {
+      const c = shown.find(x=>x.id===card.dataset.id);
+      card.querySelector(".statsel").onchange = e => setStatus(c, e.target.value);
+    });
+    const hu=document.getElementById("hu"); if(hu) hu.onchange=()=>{ hideUsed=hu.checked; render(); };
+  }
+  document.getElementById("back").onclick = () => { view="folders"; product=null; render(); };
+  const r=document.getElementById("refresh"); if(r) r.onclick=load;
+  foot.innerHTML = '';
+}
+
+// ---- boot ----
+render();
+load();
+</script>
+</body>
+</html>

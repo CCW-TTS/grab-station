@@ -1,0 +1,11 @@
+# Netlify config for the Product Grab Station.
+# The app is a static page in grab/; the Notion proxy is a serverless function.
+# Set NOTION_TOKEN and NOTION_DATABASE_ID in Netlify → Site settings → Environment variables.
+[build]
+  publish = "grab"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/clips"
+  to = "/.netlify/functions/clips"
+  status = 200
