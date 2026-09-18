@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Product Grab Station</title>
-<meta name="description" content="Browse product footage from Notion like a mirrored Drive, preview each clip, grab it, and move it through its status.">
+<meta name="description" content="Browse product footage from Notion by creator, like a mirrored Drive: creator, brand, product slug, then preview and grab each clip.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&display=swap">
@@ -54,7 +54,7 @@
   .path{display:flex; align-items:center; gap:.15rem; flex-wrap:wrap; margin-top:.5rem;
     font-family:ui-monospace,Consolas,monospace; font-size:.74rem; color:var(--dim)}
   .path .seg{background:var(--raise); border:1px solid var(--line); color:var(--ink);
-    border-radius:7px; padding:.22rem .45rem; cursor:pointer; max-width:16rem;
+    border-radius:7px; padding:.22rem .45rem; cursor:pointer; max-width:14rem;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .path .seg.cur{background:transparent; border-color:transparent; color:var(--dim); cursor:default}
   .path .sl{color:var(--dim); opacity:.6; padding-inline:.05rem}
@@ -78,6 +78,7 @@
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:.12rem}
   .folder .cnt{color:var(--dim); flex:0 0 auto; font-size:.72rem; font-variant-numeric:tabular-nums}
   .folder .chev{color:var(--dim); flex:0 0 auto}
+  .folder.creator .fi{font-size:1.05rem}
   .folder.review .fi{filter:grayscale(.3)}
   .folder.review .fn{color:var(--amber)}
 
@@ -138,6 +139,7 @@
 
 <script>
 // ===== Product Grab Station — Notion-backed, mirrored-Drive browser =====
+// Hierarchy: Creator -> Brand -> Product slug -> Clips
 const API = "/api/clips";
 
 // Full Status enum from Creator Clips. "Available" = not yet used.
@@ -145,6 +147,7 @@ const STATUSES = ["Looking Good","Filmed","Ready To Post","In Rotation","Posted"
 const AVAILABLE = ["Looking Good","Filmed"];               // still up for grabs
 const isUsed = c => c.status && AVAILABLE.indexOf(c.status) === -1;
 
+const UNASSIGNED = "Unassigned";                            // clips with no Creator set
 const REVIEW = "⚠ Needs Review";                            // bucket for bad detections
 const JUNK = ["error","none","zero","deleted","null","n/a","na","unknown",""];
 
@@ -187,7 +190,7 @@ const esc = s => (""+(s==null?"":s)).replace(/[&<>"]/g, ch=>({"&":"&amp;","<":"&
 
 // ---- state ----
 let clips = [];
-let view = "brands", brand = null, product = null;
+let view = "creators", creator = null, brand = null, product = null;
 let busy = true, loadErr = null, hideUsed = true, filter = "";
 let openPreview = null;   // id of the clip whose inline player is open
 
@@ -216,31 +219,52 @@ async function setStatus(c, status){
   }catch(e){ c.status = prev; render(); alert("Couldn't update status — check connection."); }
 }
 
-// ---- grouping: Brand -> Product slug -> Clips ----
+// ---- grouping keys ----
+function creatorKey(c){ return c.creator && (""+c.creator).trim() ? (""+c.creator).trim() : UNASSIGNED; }
 function slugOf(c){ return isSlug(c.product) ? (""+c.product).trim() : null; }
 function brandKey(c){ const s = slugOf(c); return s ? brandOf(s) : REVIEW; }
 function productKey(c){ const s = slugOf(c); return s || (c.product ? (""+c.product).trim() : "(no product)"); }
+const avail = arr => arr.filter(c=>!isUsed(c)).length;
 
-function brands(){
+// ---- grouping (each level filters by the levels chosen above it) ----
+function creators(){
   const g = {};
-  clips.forEach(c => { const b = brandKey(c); (g[b] = g[b] || []).push(c); });
+  clips.forEach(c => { const k = creatorKey(c); (g[k] = g[k] || []).push(c); });
   return Object.keys(g).sort((a,b)=>{
-    if(a===REVIEW) return 1; if(b===REVIEW) return -1;      // review bucket last
+    if(a===UNASSIGNED) return 1; if(b===UNASSIGNED) return -1;
+    return a.toLowerCase().localeCompare(b.toLowerCase());
+  }).map(name => ({name, clips:g[name]}));
+}
+function brandsIn(cr){
+  const g = {};
+  clips.filter(c=>creatorKey(c)===cr).forEach(c => { const b=brandKey(c); (g[b]=g[b]||[]).push(c); });
+  return Object.keys(g).sort((a,b)=>{
+    if(a===REVIEW) return 1; if(b===REVIEW) return -1;
     return a.toLowerCase().localeCompare(b.toLowerCase());
   }).map(name => ({name, clips:g[name], review:name===REVIEW}));
 }
-function productsIn(bname){
+function productsIn(cr, bname){
   const g = {};
-  clips.filter(c=>brandKey(c)===bname).forEach(c => { const p = productKey(c); (g[p] = g[p] || []).push(c); });
+  clips.filter(c=>creatorKey(c)===cr && brandKey(c)===bname).forEach(c => { const p=productKey(c); (g[p]=g[p]||[]).push(c); });
   return Object.keys(g).sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()))
     .map(slug => ({slug, clips:g[slug]}));
 }
-function clipsIn(bname, slug){
-  return clips.filter(c => brandKey(c)===bname && productKey(c)===slug);
+function clipsIn(cr, bname, slug){
+  return clips.filter(c => creatorKey(c)===cr && brandKey(c)===bname && productKey(c)===slug);
 }
-const avail = arr => arr.filter(c=>!isUsed(c)).length;
 
-function go(v, b, p){ view=v; brand=b==null?brand:b; product=p==null?product:p; openPreview=null; render(); }
+function go(v, opts){ opts = opts||{};
+  view = v;
+  if("creator" in opts) creator = opts.creator;
+  if("brand" in opts) brand = opts.brand;
+  if("product" in opts) product = opts.product;
+  openPreview = null; render();
+}
+
+function creatorIcon(name){
+  if(name===UNASSIGNED) return "👥";
+  return "🎬";
+}
 
 function render(){
   const hrow  = document.getElementById("hrow");
@@ -253,8 +277,9 @@ function render(){
     + '<button class="icbtn" id="refresh" title="Refresh">↻</button>';
 
   // breadcrumb path
-  let segs = ['<span class="seg" data-nav="brands">Drive</span>'];
-  if(view!=="brands" && brand) segs.push('<span class="seg" data-nav="products">'+esc(brand)+'</span>');
+  let segs = ['<span class="seg" data-nav="creators">Creators</span>'];
+  if(view!=="creators" && creator) segs.push('<span class="seg'+(view==="brands"?' cur':'')+'" data-nav="brands">'+esc(creator)+'</span>');
+  if((view==="products"||view==="clips") && brand) segs.push('<span class="seg'+(view==="products"?' cur':'')+'" data-nav="products">'+esc(brand)+'</span>');
   if(view==="clips" && product) segs.push('<span class="seg cur">'+esc(product)+'</span>');
   hpath.innerHTML = '<div class="path">' + segs.join('<span class="sl">/</span>') + '</div>';
 
@@ -267,13 +292,40 @@ function render(){
     foot.innerHTML=""; wire(); return;
   }
 
-  if(view === "brands"){
+  // ---- Level 1: Creators ----
+  if(view === "creators"){
     const total = clips.length;
     hmeta.innerHTML = '<div class="sub"><b>'+total+'</b> clips &middot; '+avail(clips)+' available &middot; '
-      + 'mirrored from your Creator Clips Drive</div>'
-      + '<input class="search" id="search" placeholder="Search brands or product slugs…" value="'+esc(filter)+'">';
+      + 'grouped by creator</div>'
+      + '<input class="search" id="search" placeholder="Search creators, brands or product slugs…" value="'+esc(filter)+'">';
 
-    let bs = brands();
+    let cs = creators();
+    if(filter){
+      const f=filter.toLowerCase();
+      cs = cs.map(c=>{
+        if(c.name.toLowerCase().includes(f)) return c;
+        const kept = c.clips.filter(x=>brandKey(x).toLowerCase().includes(f) || productKey(x).toLowerCase().includes(f));
+        return kept.length ? {name:c.name, clips:kept} : null;
+      }).filter(Boolean);
+    }
+    if(!cs.length){ app.innerHTML = '<div class="empty"><div class="big">🔎</div>No matching creators.</div>'; }
+    else{
+      app.innerHTML = '<div class="list">' + cs.map(c =>
+        '<button class="folder creator" data-creator="'+esc(c.name)+'">'
+        + '<span class="fi">'+creatorIcon(c.name)+'</span>'
+        + '<span class="fmeta"><span class="fn">'+esc(c.name)+'</span>'
+        + '<span class="slug">'+brandsIn(c.name).length+' brand'+(brandsIn(c.name).length===1?'':'s')+'</span></span>'
+        + '<span class="cnt">'+avail(c.clips)+' / '+c.clips.length+'</span><span class="chev">›</span></button>'
+      ).join("") + '</div>';
+    }
+    foot.innerHTML = 'Pick a creator → brand → product slug → <b>Preview</b> the clip, <b>Grab</b> it, set its <b>Status</b>. '
+      + 'Status writes straight back to Notion. Clips with no creator set land in <b>'+esc(UNASSIGNED)+'</b>.';
+    wire(); return;
+  }
+
+  // ---- Level 2: Brands within a creator ----
+  if(view === "brands"){
+    let bs = brandsIn(creator);
     if(filter){
       const f=filter.toLowerCase();
       bs = bs.map(b=>{
@@ -282,25 +334,30 @@ function render(){
         return kept.length ? {name:b.name, clips:kept, review:b.review} : null;
       }).filter(Boolean);
     }
+    const crClips = clips.filter(c=>creatorKey(c)===creator);
+    hmeta.innerHTML = '<div class="sub"><b>'+bs.length+'</b> brand'+(bs.length===1?'':'s')+' &middot; '
+      + avail(crClips)+' / '+crClips.length+' available &middot; '+esc(creator)+'</div>'
+      + '<input class="search" id="search" placeholder="Search brands or product slugs…" value="'+esc(filter)+'">';
     if(!bs.length){ app.innerHTML = '<div class="empty"><div class="big">📦</div>No matching brands or slugs.</div>'; }
     else{
       app.innerHTML = '<div class="list">' + bs.map(b =>
         '<button class="folder'+(b.review?' review':'')+'" data-brand="'+esc(b.name)+'">'
         + '<span class="fi">'+(b.review?'🗂️':'📁')+'</span>'
         + '<span class="fmeta"><span class="fn">'+esc(b.name)+'</span>'
-        + '<span class="slug">'+productsIn(b.name).length+' product'+(productsIn(b.name).length===1?'':'s')+'</span></span>'
+        + '<span class="slug">'+productsIn(creator,b.name).length+' product'+(productsIn(creator,b.name).length===1?'':'s')+'</span></span>'
         + '<span class="cnt">'+avail(b.clips)+' / '+b.clips.length+'</span><span class="chev">›</span></button>'
       ).join("") + '</div>';
     }
-    foot.innerHTML = 'Open a brand → a product slug → <b>Preview</b> the clip, <b>Grab</b> it, set its <b>Status</b>. '
-      + 'Status writes straight back to Notion. The <b>'+esc(REVIEW)+'</b> folder holds clips whose product wasn’t cleanly detected.';
+    foot.innerHTML = 'The <b>'+esc(REVIEW)+'</b> folder holds clips whose product wasn’t cleanly detected.';
     wire(); return;
   }
 
+  // ---- Level 3: Products within creator + brand ----
   if(view === "products"){
-    const list = productsIn(brand);
+    const list = productsIn(creator, brand);
+    const scoped = clips.filter(c=>creatorKey(c)===creator && brandKey(c)===brand);
     hmeta.innerHTML = '<div class="sub"><b>'+list.length+'</b> product'+(list.length===1?'':'s')+' in '
-      + esc(brand)+' &middot; '+avail(clips.filter(c=>brandKey(c)===brand))+' available</div>';
+      + esc(brand)+' &middot; '+avail(scoped)+' available</div>';
     if(!list.length){ app.innerHTML = '<div class="empty"><div class="big">📁</div>Nothing here.</div>'; }
     else{
       app.innerHTML = '<div class="list">' + list.map(p =>
@@ -315,8 +372,8 @@ function render(){
     wire(); return;
   }
 
-  // clips view
-  const all = clipsIn(brand, product);
+  // ---- Level 4: Clips ----
+  const all = clipsIn(creator, brand, product);
   const nUsed = all.filter(isUsed).length;
   hmeta.innerHTML = all.length
     ? '<label class="toggle"><input type="checkbox" id="hu"'+(hideUsed?" checked":"")+'> Hide used ('+nUsed+'/'+all.length+')</label>'
@@ -355,19 +412,23 @@ function render(){
     });
     const hu=document.getElementById("hu"); if(hu) hu.onchange=()=>{ hideUsed=hu.checked; render(); };
   }
-  foot.innerHTML = op_hint();
+  foot.innerHTML = '▶ Preview plays the clip inline from Drive. ⬇ Grab downloads the original file.';
   wire();
 }
-
-function op_hint(){ return '▶ Preview plays the clip inline from Drive. ⬇ Grab downloads the original file.'; }
 
 function wire(){
   const r=document.getElementById("refresh"); if(r) r.onclick=load;
   document.querySelectorAll(".path .seg[data-nav]").forEach(seg => {
-    seg.onclick = () => { const n=seg.dataset.nav; if(n==="brands") go("brands"); else if(n==="products") go("products"); };
+    seg.onclick = () => {
+      const n=seg.dataset.nav;
+      if(n==="creators") go("creators");
+      else if(n==="brands") go("brands");
+      else if(n==="products") go("products");
+    };
   });
-  document.querySelectorAll(".folder[data-brand]").forEach(b => b.onclick = () => go("products", b.dataset.brand, null));
-  document.querySelectorAll(".folder[data-prod]").forEach(b => b.onclick = () => go("clips", null, b.dataset.prod));
+  document.querySelectorAll(".folder[data-creator]").forEach(b => b.onclick = () => go("brands", {creator:b.dataset.creator, brand:null, product:null}));
+  document.querySelectorAll(".folder[data-brand]").forEach(b => b.onclick = () => go("products", {brand:b.dataset.brand, product:null}));
+  document.querySelectorAll(".folder[data-prod]").forEach(b => b.onclick = () => go("clips", {product:b.dataset.prod}));
   const s=document.getElementById("search");
   if(s) s.oninput=()=>{ filter=s.value; const pos=s.selectionStart; render(); const s2=document.getElementById("search"); if(s2){s2.focus(); try{s2.setSelectionRange(pos,pos);}catch(e){}} };
 }
