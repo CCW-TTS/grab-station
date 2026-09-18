@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Product Grab Station</title>
-<meta name="description" content="Browse product footage from Notion, grab clips to your phone, and move each clip through its status.">
+<meta name="description" content="Browse product footage from Notion like a mirrored Drive, preview each clip, grab it, and move it through its status.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&display=swap">
@@ -15,6 +15,7 @@
     --rust:#c05a29; --rust-ink:#8a3d18;
     --gold:#b98518; --gold-bg:#f6ecd2;
     --sage:#557049; --sage-bg:#e6ecdf;
+    --amber:#a8700f; --amber-bg:#f7e9cf;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
@@ -23,6 +24,7 @@
       --rust:#e37c46; --rust-ink:#f0a578;
       --gold:#e0b148; --gold-bg:#332a17;
       --sage:#93b483; --sage-bg:#232c1c;
+      --amber:#e0b148; --amber-bg:#33290f;
     }
   }
   :root[data-theme="dark"]{
@@ -31,60 +33,81 @@
     --rust:#e37c46; --rust-ink:#f0a578;
     --gold:#e0b148; --gold-bg:#332a17;
     --sage:#93b483; --sage-bg:#232c1c;
+    --amber:#e0b148; --amber-bg:#33290f;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
   body{margin:0; background:var(--ground); color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased}
-  .wrap{max-width:640px; margin:0 auto; padding-inline:16px; padding-bottom:40px}
+  .wrap{max-width:660px; margin:0 auto; padding-inline:16px; padding-bottom:44px}
   header{position:sticky; top:env(safe-area-inset-top,0px); z-index:10;
     background:var(--ground); border-bottom:1px solid var(--line); padding-block:.7rem .55rem}
   .hrow{display:flex; align-items:center; gap:.55rem; min-height:1.9rem}
-  h1{font-family:"Archivo",system-ui,sans-serif; font-weight:800; font-size:1.1rem;
+  h1{font-family:"Archivo",system-ui,sans-serif; font-weight:800; font-size:1.05rem;
     letter-spacing:-.01em; margin:0; text-transform:uppercase}
   h1 .dot{color:var(--rust)}
-  .back{font-family:"Archivo",system-ui,sans-serif; font-weight:700; font-size:.8rem;
-    background:var(--raise); border:1px solid var(--line); color:var(--ink);
-    border-radius:9px; padding:.35rem .6rem; cursor:pointer}
-  .crumb{font-family:"Archivo",system-ui,sans-serif; font-weight:700; font-size:.95rem;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0}
   .spacer{flex:1}
   .icbtn{background:var(--raise); border:1px solid var(--line); color:var(--dim);
     border-radius:9px; padding:.35rem .55rem; cursor:pointer; font-size:.9rem; line-height:1}
-  .sub{font-size:.7rem; color:var(--dim); margin-top:.35rem}
+
+  /* breadcrumb path — the "mirrored Drive" bar */
+  .path{display:flex; align-items:center; gap:.15rem; flex-wrap:wrap; margin-top:.5rem;
+    font-family:ui-monospace,Consolas,monospace; font-size:.74rem; color:var(--dim)}
+  .path .seg{background:var(--raise); border:1px solid var(--line); color:var(--ink);
+    border-radius:7px; padding:.22rem .45rem; cursor:pointer; max-width:16rem;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .path .seg.cur{background:transparent; border-color:transparent; color:var(--dim); cursor:default}
+  .path .sl{color:var(--dim); opacity:.6; padding-inline:.05rem}
+
+  .sub{font-size:.7rem; color:var(--dim); margin-top:.4rem}
   .sub b{color:var(--sage)}
   .toggle{display:flex; align-items:center; gap:.4rem; margin-top:.5rem; font-size:.75rem; color:var(--dim)}
   .toggle input{accent-color:var(--rust); width:1.05rem; height:1.05rem}
   .search{width:100%; margin-top:.6rem; font:inherit; font-size:.85rem; padding:.5rem .6rem;
     border-radius:10px; border:1px solid var(--line); background:var(--surface); color:var(--ink)}
 
-  .list{display:flex; flex-direction:column; gap:.55rem; margin-top:.8rem}
+  .list{display:flex; flex-direction:column; gap:.5rem; margin-top:.8rem}
   .folder{display:flex; align-items:center; gap:.7rem; background:var(--surface);
-    border:1px solid var(--line); border-radius:13px; padding:.75rem .8rem; cursor:pointer;
+    border:1px solid var(--line); border-radius:13px; padding:.72rem .8rem; cursor:pointer;
     text-align:left; width:100%; color:var(--ink); font:inherit}
   .folder .fi{font-size:1.15rem; flex:0 0 auto}
+  .folder .fmeta{min-width:0; flex:1}
   .folder .fn{font-family:"Archivo",system-ui,sans-serif; font-weight:700; font-size:.92rem;
-    min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .folder .slug{font-family:ui-monospace,Consolas,monospace; font-size:.68rem; color:var(--dim);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:.12rem}
   .folder .cnt{color:var(--dim); flex:0 0 auto; font-size:.72rem; font-variant-numeric:tabular-nums}
   .folder .chev{color:var(--dim); flex:0 0 auto}
+  .folder.review .fi{filter:grayscale(.3)}
+  .folder.review .fn{color:var(--amber)}
 
   .card{background:var(--surface); border:1px solid var(--line); border-radius:14px;
     padding:.8rem .85rem; display:flex; flex-direction:column; gap:.6rem}
-  .card.used{opacity:.55}
+  .card.used{opacity:.6}
   .ctop{display:flex; gap:.6rem; align-items:flex-start}
   .idx{font-family:ui-monospace,Consolas,monospace; font-size:.7rem; font-weight:700; color:var(--dim);
     background:var(--raise); border:1px solid var(--line); border-radius:8px; padding:.3rem .45rem;
     min-width:2.1rem; text-align:center; flex:0 0 auto}
   .cmeta{min-width:0; flex:1}
-  .cname{font-family:ui-monospace,Consolas,monospace; font-weight:600; font-size:.86rem;
+  .cname{font-family:ui-monospace,Consolas,monospace; font-weight:600; font-size:.84rem;
     word-break:break-all; line-height:1.25}
-  .ctags{display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.25rem; font-size:.72rem; color:var(--dim)}
+  .ctags{display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.3rem}
+  .tag{font-size:.66rem; color:var(--dim); background:var(--raise); border:1px solid var(--line);
+    border-radius:999px; padding:.15rem .5rem; font-family:ui-monospace,Consolas,monospace;
+    max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .tag.slug{color:var(--rust-ink)}
+
+  .preview{border:1px solid var(--line); border-radius:11px; overflow:hidden; background:#000;
+    height:58vh; max-height:460px}
+  .preview iframe{width:100%; height:100%; border:0; display:block; background:#000}
+
   .actions{display:flex; gap:.45rem; align-items:center}
   .btn{display:flex; align-items:center; justify-content:center; gap:.3rem;
     font-family:"Archivo",system-ui,sans-serif; font-weight:700; font-size:.8rem; border-radius:10px;
-    padding:.58rem .55rem; cursor:pointer; border:1px solid var(--line); background:var(--raise);
+    padding:.58rem .6rem; cursor:pointer; border:1px solid var(--line); background:var(--raise);
     color:var(--ink); text-decoration:none; line-height:1; -webkit-tap-highlight-color:transparent}
   .btn.prev{color:var(--rust-ink); flex:0 0 auto}
+  .btn.prev.on{background:var(--rust); color:#fff; border-color:var(--rust)}
   .btn.grab{background:var(--rust); color:#fff; border-color:var(--rust); flex:0 0 auto}
   .btn[aria-disabled="true"]{opacity:.4; pointer-events:none}
   .statwrap{flex:1; min-width:0}
@@ -106,6 +129,7 @@
 <div class="wrap">
   <header>
     <div class="hrow" id="hrow"></div>
+    <div id="hpath"></div>
     <div id="hmeta"></div>
   </header>
   <div id="app"></div>
@@ -113,7 +137,7 @@
 </div>
 
 <script>
-// ===== Product Grab Station — Notion-backed (via serverless proxy, no keys in browser) =====
+// ===== Product Grab Station — Notion-backed, mirrored-Drive browser =====
 const API = "/api/clips";
 
 // Full Status enum from Creator Clips. "Available" = not yet used.
@@ -121,17 +145,56 @@ const STATUSES = ["Looking Good","Filmed","Ready To Post","In Rotation","Posted"
 const AVAILABLE = ["Looking Good","Filmed"];               // still up for grabs
 const isUsed = c => c.status && AVAILABLE.indexOf(c.status) === -1;
 
+const REVIEW = "⚠ Needs Review";                            // bucket for bad detections
+const JUNK = ["error","none","zero","deleted","null","n/a","na","unknown",""];
+
+// A "Detected Product" is a usable slug only if it is a real hyphen-slug (no spaces,
+// no newlines, not junk, not an over-long LLM sentence).
+function isSlug(p){
+  if(p == null) return false;
+  const s = (""+p).trim().toLowerCase();
+  if(!s || JUNK.indexOf(s) !== -1) return false;
+  if(/\s/.test(s)) return false;
+  if(s.length > 70) return false;
+  return true;
+}
+
+// Known brand prefixes → display name (longest prefix wins). drmelaxin & dr-melaxin merge.
+const BRANDS = [
+  ["medicube","Medicube"], ["drmelaxin","Dr. Melaxin"], ["dr-melaxin","Dr. Melaxin"],
+  ["dr-gummy","Dr. Gummy"], ["skin1004","SKIN1004"], ["skin-1004","SKIN1004"],
+  ["missha","MISSHA"], ["shark","Shark"], ["pink-stork","Pink Stork"],
+  ["laura-geller","Laura Geller"], ["diff","DIFF Eyewear"], ["neuriva","Neuriva"],
+  ["neuro","Neuro"], ["bears-with-benefits","Bears With Benefits"], ["kitsch","Kitsch"],
+  ["schiff","Schiff"], ["pup-labs","Pup Labs"], ["abib","Abib"], ["skullcandy","Skullcandy"],
+  ["birkenstock","Birkenstock"], ["centellian","Centellian24"], ["nad","NAD"],
+  ["pink-glow","Pink Glow"]
+];
+function titleCase(s){ return s.replace(/[-_]+/g," ").replace(/\b\w/g, m=>m.toUpperCase()).trim(); }
+function brandOf(slug){
+  const s = slug.toLowerCase();
+  let best = null;
+  for(const [pre,label] of BRANDS){
+    if((s === pre || s.startsWith(pre+"-")) && (!best || pre.length > best[0].length)) best=[pre,label];
+  }
+  return best ? best[1] : titleCase(s.split("-")[0] || slug);
+}
+
 const dlUrl = c => c.driveFileId ? "https://drive.google.com/uc?export=download&id=" + encodeURIComponent(c.driveFileId) : (c.driveLink || "");
-const prevUrl = c => c.driveLink || (c.driveFileId ? "https://drive.google.com/file/d/" + encodeURIComponent(c.driveFileId) + "/view" : "");
+const embedUrl = c => c.driveFileId ? "https://drive.google.com/file/d/" + encodeURIComponent(c.driveFileId) + "/preview" : "";
+const openUrl = c => c.driveLink || (c.driveFileId ? "https://drive.google.com/file/d/" + encodeURIComponent(c.driveFileId) + "/view" : "");
 const esc = s => (""+(s==null?"":s)).replace(/[&<>"]/g, ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
 
 // ---- state ----
 let clips = [];
-let view = "folders", product = null;
+let view = "brands", brand = null, product = null;
 let busy = true, loadErr = null, hideUsed = true, filter = "";
+let openPreview = null;   // id of the clip whose inline player is open
 
 async function load(){
   busy = true; loadErr = null; render();
+  // Preview builds ship a baked snapshot so the tree can be browsed without the serverless proxy.
+  if (window.__PREVIEW_CLIPS__) { clips = window.__PREVIEW_CLIPS__.slice(); busy = false; render(); return; }
   try{
     const res = await fetch(API, {headers:{"Accept":"application/json"}});
     if(!res.ok){ loadErr = "http_"+res.status; busy=false; render(); return; }
@@ -145,6 +208,7 @@ async function setStatus(c, status){
   const prev = c.status;
   c.status = status;             // optimistic
   render();
+  if (window.__PREVIEW_CLIPS__) return;   // no writes from a baked preview
   try{
     const res = await fetch(API, {method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({id:c.id, status})});
@@ -152,75 +216,132 @@ async function setStatus(c, status){
   }catch(e){ c.status = prev; render(); alert("Couldn't update status — check connection."); }
 }
 
-function products(){
+// ---- grouping: Brand -> Product slug -> Clips ----
+function slugOf(c){ return isSlug(c.product) ? (""+c.product).trim() : null; }
+function brandKey(c){ const s = slugOf(c); return s ? brandOf(s) : REVIEW; }
+function productKey(c){ const s = slugOf(c); return s || (c.product ? (""+c.product).trim() : "(no product)"); }
+
+function brands(){
   const g = {};
-  clips.forEach(c => { (g[c.product] = g[c.product] || []).push(c); });
-  return Object.keys(g).sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()))
-    .map(name => ({name, clips:g[name]}));
+  clips.forEach(c => { const b = brandKey(c); (g[b] = g[b] || []).push(c); });
+  return Object.keys(g).sort((a,b)=>{
+    if(a===REVIEW) return 1; if(b===REVIEW) return -1;      // review bucket last
+    return a.toLowerCase().localeCompare(b.toLowerCase());
+  }).map(name => ({name, clips:g[name], review:name===REVIEW}));
 }
+function productsIn(bname){
+  const g = {};
+  clips.filter(c=>brandKey(c)===bname).forEach(c => { const p = productKey(c); (g[p] = g[p] || []).push(c); });
+  return Object.keys(g).sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()))
+    .map(slug => ({slug, clips:g[slug]}));
+}
+function clipsIn(bname, slug){
+  return clips.filter(c => brandKey(c)===bname && productKey(c)===slug);
+}
+const avail = arr => arr.filter(c=>!isUsed(c)).length;
+
+function go(v, b, p){ view=v; brand=b==null?brand:b; product=p==null?product:p; openPreview=null; render(); }
 
 function render(){
-  const hrow = document.getElementById("hrow");
+  const hrow  = document.getElementById("hrow");
+  const hpath = document.getElementById("hpath");
   const hmeta = document.getElementById("hmeta");
-  const app = document.getElementById("app");
-  const foot = document.getElementById("foot");
+  const app   = document.getElementById("app");
+  const foot  = document.getElementById("foot");
 
-  if(view === "folders"){
-    hrow.innerHTML = '<h1>Grab Station<span class="dot">.</span></h1><span class="spacer"></span>'
-      + '<button class="icbtn" id="refresh" title="Refresh">↻</button>';
-    const total = clips.length, avail = clips.filter(c=>!isUsed(c)).length;
-    hmeta.innerHTML = '<div class="sub"><b>'+total+'</b> clips &middot; '+avail+' available &middot; from Notion</div>'
-      + (total ? '<input class="search" id="search" placeholder="Search products…" value="'+esc(filter)+'">' : '');
+  hrow.innerHTML = '<h1>Grab Station<span class="dot">.</span></h1><span class="spacer"></span>'
+    + '<button class="icbtn" id="refresh" title="Refresh">↻</button>';
 
-    if(busy){ app.innerHTML = '<div class="spin">Loading footage from Notion…</div>'; foot.innerHTML=""; return; }
-    if(loadErr){
-      app.innerHTML = '<div class="note">'+(loadErr==="network"
-        ? 'Could not reach the server. Is the Netlify function deployed?'
-        : 'Server error ('+esc(loadErr)+'). Check NOTION_TOKEN / NOTION_DATABASE_ID in Netlify.')+'</div>';
-      const r=document.getElementById("refresh"); if(r) r.onclick=load; foot.innerHTML=""; return;
+  // breadcrumb path
+  let segs = ['<span class="seg" data-nav="brands">Drive</span>'];
+  if(view!=="brands" && brand) segs.push('<span class="seg" data-nav="products">'+esc(brand)+'</span>');
+  if(view==="clips" && product) segs.push('<span class="seg cur">'+esc(product)+'</span>');
+  hpath.innerHTML = '<div class="path">' + segs.join('<span class="sl">/</span>') + '</div>';
+
+  if(busy){ hmeta.innerHTML=""; app.innerHTML = '<div class="spin">Loading footage from Notion…</div>'; foot.innerHTML=""; wire(); return; }
+  if(loadErr){
+    hmeta.innerHTML="";
+    app.innerHTML = '<div class="note">'+(loadErr==="network"
+      ? 'Could not reach the server. Is the Netlify function deployed?'
+      : 'Server error ('+esc(loadErr)+'). Check NOTION_TOKEN / NOTION_DATABASE_ID in Netlify.')+'</div>';
+    foot.innerHTML=""; wire(); return;
+  }
+
+  if(view === "brands"){
+    const total = clips.length;
+    hmeta.innerHTML = '<div class="sub"><b>'+total+'</b> clips &middot; '+avail(clips)+' available &middot; '
+      + 'mirrored from your Creator Clips Drive</div>'
+      + '<input class="search" id="search" placeholder="Search brands or product slugs…" value="'+esc(filter)+'">';
+
+    let bs = brands();
+    if(filter){
+      const f=filter.toLowerCase();
+      bs = bs.map(b=>{
+        if(b.name.toLowerCase().includes(f)) return b;
+        const kept = b.clips.filter(c=>productKey(c).toLowerCase().includes(f));
+        return kept.length ? {name:b.name, clips:kept, review:b.review} : null;
+      }).filter(Boolean);
     }
-    let groups = products();
-    if(filter){ const f=filter.toLowerCase(); groups = groups.filter(g=>g.name.toLowerCase().includes(f)); }
-    if(!groups.length){ app.innerHTML = '<div class="empty"><div class="big">📦</div>No matching products.</div>'; }
-    else {
-      app.innerHTML = '<div class="list">' + groups.map(g => {
-        const av = g.clips.filter(c=>!isUsed(c)).length;
-        return '<button class="folder" data-p="'+esc(g.name)+'"><span class="fi">📁</span>'
-          + '<span class="fn">'+esc(g.name)+'</span>'
-          + '<span class="cnt">'+av+' / '+g.clips.length+'</span><span class="chev">›</span></button>';
-      }).join("") + '</div>';
-      app.querySelectorAll(".folder").forEach(b => b.onclick = () => { product=b.dataset.p; view="clips"; render(); });
+    if(!bs.length){ app.innerHTML = '<div class="empty"><div class="big">📦</div>No matching brands or slugs.</div>'; }
+    else{
+      app.innerHTML = '<div class="list">' + bs.map(b =>
+        '<button class="folder'+(b.review?' review':'')+'" data-brand="'+esc(b.name)+'">'
+        + '<span class="fi">'+(b.review?'🗂️':'📁')+'</span>'
+        + '<span class="fmeta"><span class="fn">'+esc(b.name)+'</span>'
+        + '<span class="slug">'+productsIn(b.name).length+' product'+(productsIn(b.name).length===1?'':'s')+'</span></span>'
+        + '<span class="cnt">'+avail(b.clips)+' / '+b.clips.length+'</span><span class="chev">›</span></button>'
+      ).join("") + '</div>';
     }
-    const r=document.getElementById("refresh"); if(r) r.onclick=load;
-    const s=document.getElementById("search"); if(s) s.oninput=()=>{ filter=s.value; const pos=s.selectionStart; render(); const s2=document.getElementById("search"); if(s2){s2.focus(); try{s2.setSelectionRange(pos,pos);}catch(e){}} };
-    foot.innerHTML = 'Pick a product → <b>Grab</b> a clip → set its <b>Status</b>. Status writes straight back to your Creator Clips database in Notion.';
-    return;
+    foot.innerHTML = 'Open a brand → a product slug → <b>Preview</b> the clip, <b>Grab</b> it, set its <b>Status</b>. '
+      + 'Status writes straight back to Notion. The <b>'+esc(REVIEW)+'</b> folder holds clips whose product wasn’t cleanly detected.';
+    wire(); return;
+  }
+
+  if(view === "products"){
+    const list = productsIn(brand);
+    hmeta.innerHTML = '<div class="sub"><b>'+list.length+'</b> product'+(list.length===1?'':'s')+' in '
+      + esc(brand)+' &middot; '+avail(clips.filter(c=>brandKey(c)===brand))+' available</div>';
+    if(!list.length){ app.innerHTML = '<div class="empty"><div class="big">📁</div>Nothing here.</div>'; }
+    else{
+      app.innerHTML = '<div class="list">' + list.map(p =>
+        '<button class="folder'+(brand===REVIEW?' review':'')+'" data-prod="'+esc(p.slug)+'">'
+        + '<span class="fi">'+(brand===REVIEW?'📄':'📁')+'</span>'
+        + '<span class="fmeta"><span class="fn">'+esc(brand===REVIEW ? (p.clips[0]&&p.clips[0].name || p.slug) : titleCase(p.slug))+'</span>'
+        + '<span class="slug">'+esc(p.slug)+'</span></span>'
+        + '<span class="cnt">'+avail(p.clips)+' / '+p.clips.length+'</span><span class="chev">›</span></button>'
+      ).join("") + '</div>';
+    }
+    foot.innerHTML = '';
+    wire(); return;
   }
 
   // clips view
-  const group = products().find(g=>g.name===product) || {name:product, clips:[]};
-  hrow.innerHTML = '<button class="back" id="back">‹ Products</button>'
-    + '<span class="crumb">'+esc(group.name)+'</span><span class="spacer"></span>'
-    + '<button class="icbtn" id="refresh" title="Refresh">↻</button>';
-  const nUsed = group.clips.filter(isUsed).length;
-  hmeta.innerHTML = group.clips.length
-    ? '<label class="toggle"><input type="checkbox" id="hu"'+(hideUsed?" checked":"")+'> Hide used ('+nUsed+'/'+group.clips.length+')</label>'
+  const all = clipsIn(brand, product);
+  const nUsed = all.filter(isUsed).length;
+  hmeta.innerHTML = all.length
+    ? '<label class="toggle"><input type="checkbox" id="hu"'+(hideUsed?" checked":"")+'> Hide used ('+nUsed+'/'+all.length+')</label>'
     : '<div class="sub">&nbsp;</div>';
 
-  const shown = group.clips.filter(c => hideUsed ? !isUsed(c) : true);
+  const shown = all.filter(c => hideUsed ? !isUsed(c) : true);
   if(!shown.length){
     app.innerHTML = '<div class="empty"><div class="big">✨</div>'
-      + (group.clips.length ? 'Every clip here is used.' : 'No clips in this product.') + '</div>';
+      + (all.length ? 'Every clip here is used.' : 'No clips in this product.') + '</div>';
   } else {
     app.innerHTML = '<div class="list">' + shown.map((c,i) => {
-      const u=isUsed(c), g=dlUrl(c), p=prevUrl(c);
+      const u=isUsed(c), g=dlUrl(c), em=embedUrl(c), op=openUrl(c), on=openPreview===c.id;
       const opts = STATUSES.map(s=>'<option'+(s===c.status?' selected':'')+'>'+esc(s)+'</option>').join("");
+      const slug = slugOf(c);
       return '<div class="card'+(u?" used":"")+'" data-id="'+esc(c.id)+'">'
         + '<div class="ctop"><span class="idx">'+String(i+1).padStart(2,"0")+'</span>'
         + '<div class="cmeta"><div class="cname">'+esc(c.name || "(clip)")+'</div>'
-        + '<div class="ctags">'+(c.creator?'<span>'+esc(c.creator)+'</span>':'')+'</div></div></div>'
+        + '<div class="ctags">'
+        + (slug?'<span class="tag slug" title="'+esc(slug)+'">'+esc(slug)+'</span>':'')
+        + (c.creator?'<span class="tag">'+esc(c.creator)+'</span>':'')
+        + (c.status?'<span class="tag">'+esc(c.status)+'</span>':'')
+        + '</div></div></div>'
+        + (on && em ? '<div class="preview"><iframe src="'+esc(em)+'" allow="autoplay; fullscreen" allowfullscreen referrerpolicy="no-referrer"></iframe></div>' : '')
         + '<div class="actions">'
-        + '<a class="btn prev" '+(p?'href="'+esc(p)+'" target="_blank" rel="noopener"':'aria-disabled="true"')+'>▶</a>'
+        + '<button class="btn prev'+(on?' on':'')+'" data-prev="'+esc(c.id)+'" '+(em?'':'disabled aria-disabled="true"')+'>'+(on?'▨ Hide':'▶ Preview')+'</button>'
         + '<a class="btn grab" '+(g?'href="'+esc(g)+'" target="_blank" rel="noopener"':'aria-disabled="true"')+'>⬇ Grab</a>'
         + '<span class="statwrap"><select class="statsel">'+opts+'</select></span>'
         + '</div></div>';
@@ -229,11 +350,26 @@ function render(){
       const c = shown.find(x=>x.id===card.dataset.id);
       card.querySelector(".statsel").onchange = e => setStatus(c, e.target.value);
     });
+    app.querySelectorAll("[data-prev]").forEach(btn => {
+      btn.onclick = () => { const id=btn.dataset.prev; openPreview = (openPreview===id ? null : id); render(); };
+    });
     const hu=document.getElementById("hu"); if(hu) hu.onchange=()=>{ hideUsed=hu.checked; render(); };
   }
-  document.getElementById("back").onclick = () => { view="folders"; product=null; render(); };
+  foot.innerHTML = op_hint();
+  wire();
+}
+
+function op_hint(){ return '▶ Preview plays the clip inline from Drive. ⬇ Grab downloads the original file.'; }
+
+function wire(){
   const r=document.getElementById("refresh"); if(r) r.onclick=load;
-  foot.innerHTML = '';
+  document.querySelectorAll(".path .seg[data-nav]").forEach(seg => {
+    seg.onclick = () => { const n=seg.dataset.nav; if(n==="brands") go("brands"); else if(n==="products") go("products"); };
+  });
+  document.querySelectorAll(".folder[data-brand]").forEach(b => b.onclick = () => go("products", b.dataset.brand, null));
+  document.querySelectorAll(".folder[data-prod]").forEach(b => b.onclick = () => go("clips", null, b.dataset.prod));
+  const s=document.getElementById("search");
+  if(s) s.oninput=()=>{ filter=s.value; const pos=s.selectionStart; render(); const s2=document.getElementById("search"); if(s2){s2.focus(); try{s2.setSelectionRange(pos,pos);}catch(e){}} };
 }
 
 // ---- boot ----
